@@ -1,0 +1,28 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.pytest_logs/
+.cache/
+dist/
+build/
+*.egg-info/
+.uv/
+uv.lock
+
+# docs, plans, and future product dirs (not for public repo)
+docs/
+Aethr/
+PLAN.md
+scripts/scratch_*
+scripts/channel_probe_tool.py
+
+# local config
+.claude/
+.mcp.json
+.agent-council/
+.gemini/
+
+# media / temp
+V/

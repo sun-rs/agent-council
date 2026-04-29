@@ -1,0 +1,50 @@
+room = "room1"
+broker = "ws://127.0.0.1:9100"
+
+# Optional. If omitted, the viewer will ask for it when you type /init.
+# workdir = "/path/to/your/project"
+
+[tmux]
+session = "agent-council"
+agent_window = "agents"
+listen_delay_s = 10.0
+
+[claude]
+[[claude.agents]]
+model_id = "gpt-5.4"
+effort = "xhigh"
+alias = "gpt-5.4-claude"
+role = "architect-reviewer"
+
+[codex]
+[[codex.agents]]
+model_id = "gpt-5.5"
+reasoning_effort = "xhigh"
+alias = "gpt-5.5-codex"
+role = "lead-implementer"
+
+[[codex.agents]]
+model_id = "gpt-5.4"
+reasoning_effort = "high"
+alias = "gpt-5.4-codex"
+role = "fast-implementer"
+
+[gemini]
+[[gemini.agents]]
+model_id = "gemini-3.1-pro-preview"
+alias = "gemini_pro"
+role = "researcher"
+thinking_budget = 32768
+
+[kimi]
+[[kimi.agents]]
+model_id = "kimi-k2.6"
+thinking = true
+role = "long-context-reader"
+
+
+[opencode]
+[[opencode.agents]]
+model_id = "deepseek/deepseek-v4-pro"
+alias = "deepseek-v4-pro"
+role = "alternate-implementer"
