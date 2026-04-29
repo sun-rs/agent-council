@@ -30,13 +30,13 @@ KNOWN_AGENT_PROFILES: dict[str, AgentProfile] = {
         actor="claude",
         label="Claude Code",
         cli="claude",
-        notes="MCP-capable. Use the channel MCP server and ask it to join/listen.",
+        notes="MCP-capable. Use the channel MCP server and inject the council bootstrap prompt.",
     ),
     "codex": AgentProfile(
         actor="codex",
         label="Codex CLI",
         cli="codex",
-        notes="MCP-capable. Register the channel server, then ask it to join/listen.",
+        notes="MCP-capable. Register the channel server, then inject the council bootstrap prompt.",
     ),
     "gemini": AgentProfile(
         actor="gemini",

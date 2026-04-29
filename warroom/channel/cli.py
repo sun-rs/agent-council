@@ -197,7 +197,7 @@ def main() -> None:
     run_p.add_argument(
         "--auto-listen",
         action="store_true",
-        help="After launch, send the room join/listen prompt to every agent pane",
+        help="After launch, inject the council bootstrap prompt into every agent pane",
     )
     run_p.add_argument(
         "--listen-delay",
@@ -221,7 +221,7 @@ def main() -> None:
     up_p.add_argument("--no-attach", action="store_true", help="Create tmux session without attaching")
     up_p.add_argument("--dry-run", action="store_true", help="Print tmux commands without running them")
     up_p.add_argument("--no-replace", action="store_true", help="Do not replace an existing tmux session")
-    up_p.add_argument("--no-auto-listen", action="store_true", help="Do not auto-send the join/listen prompt")
+    up_p.add_argument("--no-auto-listen", action="store_true", help="Do not auto-inject the council bootstrap prompt")
     up_p.add_argument(
         "--listen-delay",
         type=float,
