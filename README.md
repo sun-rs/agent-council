@@ -45,7 +45,7 @@ Useful debug commands:
 ./agent-council mcp-command --actor kimi --cwd "$PWD" --format json
 ./agent-council mcp-command --actor opencode --cwd "$PWD" --format json
 ./agent-council init --cwd "$PWD" --actors claude,codex,gemini,kimi,opencode --force
-./agent-council up --dry-run
+python ./start.py --dry-run --no-attach
 ```
 
 The channel core is actor-agnostic. Any MCP-compatible CLI can use the same

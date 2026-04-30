@@ -166,7 +166,12 @@ def _merge_json_file(path: Path, patch: dict) -> None:
     path.write_text(json.dumps(merged, indent=2, sort_keys=True) + "\n")
 
 
-def prepare_cli_configs(config_dir: Path, council: dict) -> list[Path]:
+def prepare_cli_configs(
+    config_dir: Path,
+    council: dict,
+    *,
+    actors: set[str] | None = None,
+) -> list[Path]:
     """Write only the project configs required by CLIs that lack a config-file flag."""
     written: list[Path] = []
     workspace = council["workspace"]
@@ -176,6 +181,8 @@ def prepare_cli_configs(config_dir: Path, council: dict) -> list[Path]:
 
     for agent in council.get("agents", []):
         if agent.get("enabled") is False:
+            continue
+        if actors is not None and agent.get("actor") not in actors:
             continue
         if agent.get("cli") != "gemini":
             continue
@@ -554,8 +561,6 @@ def launch_agents_from_toml(
     council = build_council_config_from_toml(config_path, workdir=workdir)
     out = Path(output_dir) if output_dir is not None else config_path.parent / ".agent-council"
     written = [] if dry_run else write_materialized_council_config(out, council, force=True)
-    if not dry_run:
-        prepare_cli_configs(out, council)
 
     enabled_agents = [
         agent for agent in council.get("agents", [])
@@ -576,6 +581,14 @@ def launch_agents_from_toml(
 
     if not runnable:
         raise ValueError("no configured agent CLI is available to launch")
+    if not dry_run:
+        written.extend(
+            prepare_cli_configs(
+                out,
+                council,
+                actors={agent["actor"] for agent in runnable},
+            )
+        )
 
     first = runnable[0]
     commands: list[list[str]] = []
@@ -655,7 +668,6 @@ def run_tmux_council(
         raise FileNotFoundError("tmux not found")
 
     config_path, council = load_council_config(config_path)
-    written = [] if dry_run else prepare_cli_configs(config_path.parent, council)
     plan = build_tmux_plan(
         config_path,
         actors=actors,
@@ -668,6 +680,8 @@ def run_tmux_council(
         auto_listen=auto_listen,
         listen_delay_s=listen_delay_s,
     )
+    launched_actors = {pane.name for pane in plan.panes[1:]}
+    written: list[Path] = []
     if not dry_run:
         if _tmux_session_exists(session_name):
             if not replace_existing:
@@ -678,6 +692,11 @@ def run_tmux_council(
                     "or pass --replace"
                 )
             _run_tmux_command(["tmux", "kill-session", "-t", session_name])
+        written = prepare_cli_configs(
+            config_path.parent,
+            council,
+            actors=launched_actors,
+        )
         for command in commands:
             _run_tmux_command(command)
     return plan, written, commands

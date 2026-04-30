@@ -168,6 +168,32 @@ alias = "deepseek_v4"
         build_council_config_from_toml(config_path)
 
 
+def test_build_council_config_from_grouped_toml_rejects_reserved_alias(tmp_path):
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+workdir = "/tmp/work"
+
+[kimi]
+[[kimi.agents]]
+model_id = "kimi-k2"
+alias = "user"
+""".strip()
+    )
+
+    with pytest.raises(ValueError, match="reserved agent alias/actor"):
+        build_council_config_from_toml(config_path)
+
+
+def test_build_council_config_rejects_reserved_actor(tmp_path):
+    with pytest.raises(ValueError, match="reserved agent alias/actor"):
+        build_council_config(
+            actors=["user"],
+            cwd=str(tmp_path / "workspace"),
+            project_dir="/project",
+        )
+
+
 def test_build_common_mcp_json_config_is_compatible_shape(tmp_path):
     config = build_mcp_json_config(
         "kimi",

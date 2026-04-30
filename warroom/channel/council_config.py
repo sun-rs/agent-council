@@ -26,6 +26,7 @@ from warroom.channel.agent_profiles import (
 CONFIG_VERSION = 1
 DEFAULT_COUNCIL_ACTORS = ("claude", "codex", "gemini", "kimi", "opencode")
 DEFAULT_MCP_SERVER_NAME = "channel"
+RESERVED_AGENT_ACTORS = {"user", "system", "viewer", "broker", "council", "agent-council"}
 _SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9_-]+")
 _ROOT_CONFIG_KEYS = {
     "room",
@@ -304,6 +305,8 @@ def build_council_config(
             }
         )
 
+    _validate_unique_agents(agent_entries)
+
     return {
         "version": CONFIG_VERSION,
         "room": room,
@@ -467,6 +470,8 @@ def _validate_unique_agents(agents: list[dict]) -> None:
     seen: dict[str, str] = {}
     for agent in agents:
         actor = agent["actor"]
+        if actor.lower() in RESERVED_AGENT_ACTORS:
+            raise ValueError(f"reserved agent alias/actor {actor!r}")
         previous = seen.get(actor)
         if previous is not None:
             raise ValueError(f"duplicate agent alias/actor {actor!r}")

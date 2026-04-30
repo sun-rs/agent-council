@@ -100,6 +100,43 @@ def test_prepare_cli_configs_keeps_multiple_gemini_instances_separate(tmp_path):
     assert flash_args[flash_args.index("--actor") + 1] == "gemini-2.5-flash@gemini"
 
 
+def test_prepare_cli_configs_filters_to_launched_actors(tmp_path):
+    config_path = _write_config(tmp_path, actors=["codex", "gemini"])
+
+    written = prepare_cli_configs(
+        config_path.parent,
+        _load(config_path),
+        actors={"codex"},
+    )
+
+    assert written == []
+    assert not (tmp_path / "workspace" / ".gemini" / "settings.json").exists()
+
+
+def test_run_tmux_council_prepares_only_selected_runnable_agents(tmp_path, monkeypatch):
+    config_path = _write_config(tmp_path, actors=["codex", "gemini"])
+    captured = []
+
+    monkeypatch.setattr(tmux_council.shutil, "which", lambda _: "/usr/bin/fake")
+    monkeypatch.setattr(tmux_council, "_tmux_session_exists", lambda _session: False)
+    monkeypatch.setattr(tmux_council, "_run_tmux_command", lambda _command: None)
+
+    def fake_prepare(config_dir, council, *, actors=None):
+        captured.append(actors)
+        return []
+
+    monkeypatch.setattr(tmux_council, "prepare_cli_configs", fake_prepare)
+
+    run_tmux_council(
+        config_path,
+        actors="codex",
+        session_name="selected-council",
+        attach=False,
+    )
+
+    assert captured == [{"codex"}]
+
+
 def test_build_codex_instance_command_applies_model_and_effort(tmp_path):
     config_path = tmp_path / ".agent-council" / "council.json"
     write_council_config(
@@ -234,6 +271,7 @@ def test_run_tmux_council_auto_listen_sends_prompt_to_agent_panes(tmp_path, monk
     assert "codex" in rendered
     assert "gemini" in rendered
     assert "你的 actor id 是 'codex'" in join_listen_prompt("room1", actor="codex")
+    assert "recent_messages" in join_listen_prompt("room1", actor="codex")
     assert "timeout 不是结束" in join_listen_prompt("room1")
 
 

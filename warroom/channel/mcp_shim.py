@@ -65,7 +65,9 @@ async def _ensure_client() -> ChannelClient:
 async def channel_join(room: str = "room1") -> dict:
     """Join a channel room. Must call this BEFORE post or wait_new.
 
-    Returns {"ok": true, "room": ..., "last_msg_id": int} on success.
+    Returns {"ok": true, "room": ..., "last_msg_id": int,
+    "recent_messages": [...]} on success. `recent_messages` is private
+    catch-up context returned only to this joining agent; it is not broadcast.
 
     After joining, the shim broadcasts a system message "<actor> joined <room>"
     so the viewer and other participants can see you arrived.
@@ -81,7 +83,17 @@ async def channel_join(room: str = "room1") -> dict:
             await client.post(room, content=f"[system] {_actor} joined {room}")
     except Exception:
         pass  # non-fatal
-    return {"ok": True, "room": room, "last_msg_id": resp.get("last_msg_id", 0), "is_reconnect": is_reconnect}
+    recent_messages = resp.get("recent_messages", [])
+    if not isinstance(recent_messages, list):
+        recent_messages = []
+    return {
+        "ok": True,
+        "room": room,
+        "last_msg_id": resp.get("last_msg_id", 0),
+        "recent_messages": recent_messages,
+        "recent_count": len(recent_messages),
+        "is_reconnect": is_reconnect,
+    }
 
 
 @mcp.tool()
