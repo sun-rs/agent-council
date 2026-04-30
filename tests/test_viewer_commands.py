@@ -1,7 +1,68 @@
 import json
 import subprocess
 
+from prompt_toolkit.completion import CompleteEvent, PathCompleter
+from prompt_toolkit.document import Document
+
 from warroom.channel import viewer
+
+
+def _completion_texts(text: str, completer=None) -> list[str]:
+    active_completer = completer or viewer.CouncilCompleter()
+    return [
+        completion.text
+        for completion in active_completer.get_completions(
+            Document(text, cursor_position=len(text)),
+            CompleteEvent(completion_requested=True),
+        )
+    ]
+
+
+def test_council_completer_completes_slash_commands():
+    completions = _completion_texts("/in")
+
+    assert "/init" in completions
+    assert "/inject" in completions
+    assert "/inject-missing" in completions
+
+
+def test_council_completer_ignores_normal_chat_text():
+    assert _completion_texts("hello") == []
+
+
+def test_council_completer_completes_inject_targets(monkeypatch):
+    monkeypatch.setenv(
+        viewer.COUNCIL_AGENT_PANES_ENV,
+        json.dumps(["agent-council:agents.0", "agent-council:agents.1"]),
+    )
+    monkeypatch.setenv(
+        viewer.COUNCIL_AGENT_PANE_ACTORS_ENV,
+        json.dumps(
+            {
+                "agent-council:agents.0": "kimi_reader",
+                "agent-council:agents.1": "codex_55",
+            }
+        ),
+    )
+
+    assert _completion_texts("/inject c") == ["codex_55"]
+    assert "all" in _completion_texts("/inject ")
+
+
+def test_council_completer_completes_init_workdir(tmp_path):
+    (tmp_path / "project-alpha").mkdir()
+    (tmp_path / "project-file").write_text("not a directory")
+    completer = viewer.CouncilCompleter(
+        path_completer=PathCompleter(
+            only_directories=True,
+            get_paths=lambda: [str(tmp_path)],
+            expanduser=True,
+        )
+    )
+
+    completions = _completion_texts("/init proj", completer=completer)
+
+    assert "ect-alpha" in completions
 
 
 def test_council_agent_panes_reads_json_env(monkeypatch):

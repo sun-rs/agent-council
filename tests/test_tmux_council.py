@@ -332,6 +332,8 @@ def test_run_tmux_council_auto_listen_sends_prompt_to_agent_panes(tmp_path, monk
     assert "gemini" in rendered
     assert "你的 actor id 是 'codex'" in join_listen_prompt("room1", actor="codex")
     assert "recent_messages" in join_listen_prompt("room1", actor="codex")
+    assert "用户消息优先级最高" in join_listen_prompt("room1", actor="codex")
+    assert "其他 agent 的 @ 点名" in join_listen_prompt("room1", actor="codex")
     assert "timeout 不是结束" in join_listen_prompt("room1")
 
 

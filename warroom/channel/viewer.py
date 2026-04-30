@@ -24,6 +24,8 @@ import time
 from datetime import datetime
 
 from prompt_toolkit import PromptSession, print_formatted_text
+from prompt_toolkit.completion import Completer, Completion, PathCompleter
+from prompt_toolkit.document import Document
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.patch_stdout import patch_stdout
 
@@ -49,6 +51,15 @@ ACTOR_COLORS = {
 # Match ``` code blocks (with optional language tag)
 # Match ``` code blocks — allow any non-newline info string (c++, objective-c, etc.)
 _CODE_BLOCK_RE = re.compile(r"```([^\n`]*)\n(.*?)```", re.DOTALL)
+
+_VIEWER_COMMANDS: tuple[tuple[str, str], ...] = (
+    ("/init", "launch configured agents"),
+    ("/inject", "send bootstrap prompt to agent panes"),
+    ("/inject-missing", "send bootstrap prompt to agents not yet joined"),
+    ("/panes", "show agent pane mapping"),
+    ("/exit", "kill tmux council or exit viewer"),
+    ("/help", "show local command help"),
+)
 
 
 def _terminal_width() -> int:
@@ -166,6 +177,73 @@ def _split_code_blocks(content: str) -> list[tuple[bool, str, str]]:
     if remaining:
         parts.append((False, "", remaining))
     return parts
+
+
+def _directory_completer() -> PathCompleter:
+    return PathCompleter(only_directories=True, expanduser=True)
+
+
+def _inject_completion_words() -> list[str]:
+    words: list[str] = []
+    seen: set[str] = set()
+
+    def add(value: str) -> None:
+        item = value.strip()
+        if item and item not in seen:
+            seen.add(item)
+            words.append(item)
+
+    add("all")
+    actor_by_target = _council_agent_pane_actors()
+    for target in _council_agent_panes():
+        add(actor_by_target.get(target, ""))
+        if not actor_by_target.get(target):
+            add(target)
+    return words
+
+
+class CouncilCompleter(Completer):
+    """Tab completion for viewer-local commands only.
+
+    Normal chat text intentionally has no completion so Tab does not interfere
+    with writing prompts to the room.
+    """
+
+    def __init__(self, path_completer: Completer | None = None) -> None:
+        self._path_completer = path_completer or _directory_completer()
+
+    def get_completions(self, document: Document, complete_event):
+        text = document.text_before_cursor
+        if not text.startswith("/"):
+            return
+
+        if text.startswith("/init "):
+            arg = text[len("/init "):]
+            arg_document = Document(arg, cursor_position=len(arg))
+            yield from self._path_completer.get_completions(
+                arg_document, complete_event
+            )
+            return
+
+        if text.startswith("/inject "):
+            arg = text[len("/inject "):]
+            token = arg.rsplit(" ", 1)[-1]
+            for word in _inject_completion_words():
+                if word.lower().startswith(token.lower()):
+                    yield Completion(word, start_position=-len(token))
+            return
+
+        if " " in text:
+            return
+
+        token = text
+        for command, description in _VIEWER_COMMANDS:
+            if command.startswith(token):
+                yield Completion(
+                    command,
+                    start_position=-len(token),
+                    display_meta=description,
+                )
 
 
 def _council_agent_panes() -> list[str]:
@@ -381,6 +459,7 @@ def print_help() -> None:
                 "",
                 "[viewer] Any other text is posted to the room as your message.",
                 "[viewer] Local / commands are not broadcast to agents.",
+                "[viewer] Press Tab after / commands, /inject targets, or /init paths for completion.",
             ]
         )
     )
@@ -477,7 +556,11 @@ async def run_viewer(broker_url: str, room: str) -> None:
     print(f"[viewer] joined {room} on {broker_url}. Type messages below. Ctrl+C to exit.\n")
 
     printer_task = asyncio.create_task(_printer(client, room))
-    session: PromptSession[str] = PromptSession()
+    session: PromptSession[str] = PromptSession(
+        completer=CouncilCompleter(),
+        complete_while_typing=False,
+    )
+    workdir_completer = _directory_completer()
 
     try:
         with patch_stdout():
@@ -491,7 +574,13 @@ async def run_viewer(broker_url: str, room: str) -> None:
                     continue
                 if text == "/init" and _init_needs_workdir():
                     try:
-                        workdir = (await session.prompt_async("workdir> ")).strip()
+                        workdir = (
+                            await session.prompt_async(
+                                "workdir> ",
+                                completer=workdir_completer,
+                                complete_while_typing=False,
+                            )
+                        ).strip()
                     except (KeyboardInterrupt, EOFError):
                         continue
                     if not workdir:
