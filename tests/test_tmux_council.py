@@ -1,9 +1,10 @@
 import json
+import shlex
 import subprocess
 
 import pytest
 
-from warroom.channel.council_config import write_council_config
+from warroom.channel.council_config import build_council_config_from_toml, write_council_config
 import warroom.channel.tmux_council as tmux_council
 from warroom.channel.tmux_council import (
     build_agent_command,
@@ -160,6 +161,65 @@ def test_build_codex_instance_command_applies_model_and_effort(tmp_path):
     assert '"--actor", "gpt-5.4@codex"' in codex_54
     assert "--model gpt-5.5" in codex_55
     assert "mcp_servers.channel_gpt-5_5_codex.command" in codex_55
+
+
+def test_kimi_instance_omits_unknown_model_flag(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    monkeypatch.setenv("HOME", str(home))
+    config_path = tmp_path / ".agent-council" / "council.json"
+    write_council_config(
+        tmp_path / ".agent-council",
+        actors=["kimi-k2.6@kimi"],
+        broker="ws://127.0.0.1:9100",
+        cwd=str(tmp_path / "workspace"),
+        project_dir="/project",
+    )
+    council = _load(config_path)
+    agent = council["agents"][0]
+
+    command = build_agent_command(config_path.parent, council, agent)
+    args = shlex.split(command)
+
+    assert "--model" not in args
+    assert args[args.index("--mcp-config-file") + 1] == str(
+        (config_path.parent / "mcp/kimi-k2.6@kimi.mcp.json").resolve()
+    )
+
+
+def test_kimi_instance_passes_configured_model_key(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    kimi_config = home / ".kimi" / "config.toml"
+    kimi_config.parent.mkdir(parents=True)
+    kimi_config.write_text(
+        """
+default_model = "kimi-code/kimi-for-coding"
+
+[models."kimi-code/kimi-for-coding"]
+provider = "managed:kimi-code"
+model = "kimi-for-coding"
+""".strip()
+    )
+    monkeypatch.setenv("HOME", str(home))
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        f"""
+workdir = "{tmp_path / "workspace"}"
+
+[kimi]
+[[kimi.agents]]
+model_id = "kimi-code/kimi-for-coding"
+alias = "kimi_coder"
+thinking = true
+""".strip()
+    )
+    council = build_council_config_from_toml(config_path)
+    agent = council["agents"][0]
+
+    command = build_agent_command(tmp_path / ".agent-council", council, agent)
+    args = shlex.split(command)
+
+    assert args[args.index("--model") + 1] == "kimi-code/kimi-for-coding"
+    assert "--thinking" in args
 
 
 def test_launch_agents_from_toml_dry_run_uses_second_window(tmp_path, monkeypatch):

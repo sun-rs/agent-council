@@ -6,6 +6,7 @@ import os
 import shlex
 import shutil
 import subprocess
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -112,6 +113,29 @@ def _thinking_enabled(agent: dict) -> bool | None:
         return None
     value = desired.get("thinking")
     return value if isinstance(value, bool) else None
+
+
+def _configured_kimi_models(config_file: Path | None = None) -> set[str]:
+    """Return model keys known to the local Kimi config.
+
+    Kimi's --model flag expects a key from ~/.kimi/config.toml. Passing a
+    marketing/model guess that is not configured can leave Kimi with no LLM.
+    """
+    path = config_file or (Path.home() / ".kimi" / "config.toml")
+    try:
+        raw = tomllib.loads(path.read_text())
+    except (OSError, tomllib.TOMLDecodeError):
+        return set()
+    models = raw.get("models")
+    if not isinstance(models, dict):
+        return set()
+    return {str(key) for key in models}
+
+
+def _kimi_should_pass_model(model: str | None) -> bool:
+    if not model:
+        return False
+    return model in _configured_kimi_models()
 
 
 def _toml_string(value: str) -> str:
@@ -276,9 +300,9 @@ def build_agent_command(config_dir: Path, council: dict, agent: dict) -> str:
             workspace,
             "--yolo",
             "--mcp-config-file",
-            str(mcp_json),
+            str(mcp_json.resolve()),
         ]
-        if model:
+        if _kimi_should_pass_model(model):
             argv.extend(["--model", model])
         thinking = _thinking_enabled(agent)
         if thinking is True:

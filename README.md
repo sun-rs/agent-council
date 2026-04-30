@@ -82,6 +82,11 @@ reasoning_effort = "xhigh"
 model_id = "gemini-2.5-pro"
 alias = "gemini_pro"
 thinking_budget = 32768
+
+[kimi]
+[[kimi.agents]]
+alias = "kimi_coder"
+thinking = true
 ```
 
 Aliases must be globally unique. This is invalid:
@@ -107,8 +112,11 @@ For example, `gpt-5.4@codex,gpt-5.5@codex` creates two independent Codex
 participants with unique actor IDs and unique MCP server names. The launcher
 passes configured models where the local CLI exposes a launch flag. Codex
 reasoning effort is passed as `-c model_reasoning_effort="..."`; Claude effort
-is passed as `--effort`. Unsupported thinking/budget settings are left for
-manual TUI configuration rather than being faked.
+is passed as `--effort`. Kimi is stricter: `model_id` is passed only when it
+matches a model key in `~/.kimi/config.toml`; otherwise Agent Council omits
+`--model` and lets Kimi use its logged-in default model. Unsupported
+thinking/budget settings are left for manual TUI configuration rather than being
+faked.
 
 `run-council` launches a visible tmux console: the left pane is the viewer
 (it also owns the broker process), and the right side stacks one pane per

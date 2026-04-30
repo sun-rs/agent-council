@@ -38,7 +38,7 @@ thinking_budget = 32768
 
 [kimi]
 [[kimi.agents]]
-model_id = "kimi-k2.6"
+alias = "kimi_coder"
 thinking = true
 role = "long-context-reader"
 
