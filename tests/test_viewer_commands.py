@@ -121,6 +121,16 @@ def test_handle_viewer_inject_command_targets_one_actor(monkeypatch):
     assert sent == [("room1", ["agent-council:agents.0"])]
 
 
+def test_handle_viewer_help_explains_local_commands(capsys):
+    assert viewer.handle_viewer_command("/help", "room1") == "handled"
+
+    output = capsys.readouterr().out
+    assert "/init [workdir]" in output
+    assert "/inject <agent|all>" in output
+    assert "/inject-missing" in output
+    assert "not broadcast" in output
+
+
 async def test_send_bootstrap_prompt_to_missing_agent_panes_only_targets_not_joined(monkeypatch):
     sent = []
     monkeypatch.setenv(

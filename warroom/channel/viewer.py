@@ -367,9 +367,28 @@ def launch_configured_agent_window(room: str, workdir: str) -> int:
     return len(_commands)
 
 
+def print_help() -> None:
+    print(
+        "\n".join(
+            [
+                "[viewer] Agent Council local commands:",
+                "  /init [workdir]        launch configured TUI agents, then inject the council bootstrap prompt",
+                "  /inject <agent|all>    re-inject the bootstrap prompt into one agent pane or all panes",
+                "  /inject-missing        re-inject only panes whose actor has not joined the room yet",
+                "  /panes                 show agent alias -> tmux pane mapping used by /inject",
+                "  /exit                  kill the council tmux session when available; otherwise exit viewer",
+                "  /help                  show this help",
+                "",
+                "[viewer] Any other text is posted to the room as your message.",
+                "[viewer] Local / commands are not broadcast to agents.",
+            ]
+        )
+    )
+
+
 def handle_viewer_command(text: str, room: str) -> str | None:
     if text == "/help":
-        print("[viewer] local commands: /init [workdir], /inject <agent|all>, /inject-missing, /panes, /exit, /help")
+        print_help()
         return "handled"
     if text == "/init" or text.startswith("/init "):
         workdir_arg = text[len("/init"):].strip()
