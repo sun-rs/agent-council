@@ -222,6 +222,29 @@ thinking = true
     assert "--thinking" in args
 
 
+def test_opencode_instance_applies_configured_variant(tmp_path):
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        f"""
+workdir = "{tmp_path / "workspace"}"
+
+[opencode]
+[[opencode.agents]]
+model_id = "aihubmix/grok-4.3"
+alias = "grok_high"
+variant = "high"
+""".strip()
+    )
+    council = build_council_config_from_toml(config_path)
+    agent = council["agents"][0]
+
+    command = build_agent_command(tmp_path / ".agent-council", council, agent)
+    args = shlex.split(command)
+
+    assert args[args.index("--model") + 1] == "aihubmix/grok-4.3"
+    assert args[args.index("--variant") + 1] == "high"
+
+
 def test_launch_agents_from_toml_dry_run_uses_second_window(tmp_path, monkeypatch):
     config_path = tmp_path / "config.toml"
     config_path.write_text(

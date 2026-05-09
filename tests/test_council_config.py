@@ -146,6 +146,28 @@ alias = "gemini_pro"
     assert config["agents"][2]["reasoning"]["desired"]["thinking_budget"] == 32768
 
 
+def test_build_council_config_from_grouped_toml_records_opencode_variant(tmp_path):
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+workdir = "/tmp/work"
+
+[opencode]
+[[opencode.agents]]
+model_id = "aihubmix/grok-4.3"
+alias = "grok_high"
+variant = "high"
+""".strip()
+    )
+
+    config = build_council_config_from_toml(config_path)
+
+    assert config["agents"][0]["actor"] == "grok_high"
+    assert config["agents"][0]["cli"] == "opencode"
+    assert config["agents"][0]["model"]["desired"] == "aihubmix/grok-4.3"
+    assert config["agents"][0]["reasoning"]["desired"]["variant"] == "high"
+
+
 def test_build_council_config_from_grouped_toml_rejects_duplicate_alias(tmp_path):
     config_path = tmp_path / "config.toml"
     config_path.write_text(

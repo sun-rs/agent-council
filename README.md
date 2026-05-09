@@ -87,6 +87,12 @@ thinking_budget = 32768
 [[kimi.agents]]
 alias = "kimi_coder"
 thinking = true
+
+[opencode]
+[[opencode.agents]]
+model_id = "aihubmix/grok-4.3"
+alias = "grok_high"
+variant = "high"
 ```
 
 Aliases must be globally unique. This is invalid:
@@ -116,7 +122,8 @@ is passed as `--effort`. Kimi is stricter: `model_id` is passed only when it
 matches a model key in `~/.kimi/config.toml`; otherwise Agent Council omits
 `--model` and lets Kimi use its logged-in default model. Unsupported
 thinking/budget settings are left for manual TUI configuration rather than being
-faked.
+faked. OpenCode `variant` is optional and is passed through as `--variant`
+for models/providers that support variants.
 
 `run-council` launches a visible tmux console: the left pane is the viewer
 (it also owns the broker process), and the right side stacks one pane per

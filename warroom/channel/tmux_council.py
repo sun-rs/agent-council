@@ -115,6 +115,20 @@ def _thinking_enabled(agent: dict) -> bool | None:
     return value if isinstance(value, bool) else None
 
 
+def _model_variant(agent: dict) -> str | None:
+    reasoning = agent.get("reasoning")
+    if not isinstance(reasoning, dict):
+        return None
+    desired = reasoning.get("desired")
+    if not isinstance(desired, dict):
+        return None
+    value = desired.get("variant")
+    if value is None:
+        return None
+    variant = str(value).strip()
+    return variant or None
+
+
 def _configured_kimi_models(config_file: Path | None = None) -> set[str]:
     """Return model keys known to the local Kimi config.
 
@@ -315,6 +329,7 @@ def build_agent_command(config_dir: Path, council: dict, agent: dict) -> str:
 
     if cli == "opencode":
         config_content = json.dumps(_opencode_config(agent), separators=(",", ":"))
+        variant = _model_variant(agent)
         argv = [
             "env",
             f"OPENCODE_CONFIG_CONTENT={config_content}",
@@ -322,6 +337,8 @@ def build_agent_command(config_dir: Path, council: dict, agent: dict) -> str:
         ]
         if model:
             argv.extend(["--model", model])
+        if variant:
+            argv.extend(["--variant", variant])
         argv.append(workspace)
         return _shell_join(
             argv
