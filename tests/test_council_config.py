@@ -1,4 +1,5 @@
 import json
+import os
 
 import pytest
 
@@ -53,6 +54,25 @@ def test_build_council_config_records_user_surface_and_agent_files(tmp_path):
     assert config["agents"][1]["mcp"]["args"][0:2] == ["--directory", "/project"]
 
 
+def test_build_council_config_expands_user_paths(monkeypatch, tmp_path):
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+
+    config = build_council_config(
+        actors=["codex"],
+        cwd="~/code/repos/valar",
+        project_dir="~/code/repos/agent-council",
+    )
+
+    expected_workspace = os.path.join(str(home), "code", "repos", "valar")
+    expected_project = os.path.join(str(home), "code", "repos", "agent-council")
+    assert config["workspace"] == expected_workspace
+    assert config["projectDir"] == expected_project
+    args = config["agents"][0]["mcp"]["args"]
+    assert args[args.index("--cwd") + 1] == expected_workspace
+
+
 def test_build_council_config_infers_model_and_effort_from_instance_actor(tmp_path):
     config = build_council_config(
         actors=["gpt-5.4@codex", "gpt-5.5@codex"],
@@ -105,6 +125,31 @@ thinking_budget = 1024
     assert config["agents"][0]["model"]["desired"] == "gpt-5.4"
     assert config["agents"][0]["reasoning"]["desired"]["reasoning_effort"] == "xhigh"
     assert config["agents"][1]["reasoning"]["desired"]["thinking_budget"] == 1024
+
+
+def test_build_council_config_from_toml_expands_user_workdir(monkeypatch, tmp_path):
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+workdir = "~/code/repos/valar"
+project_dir = "~/code/repos/agent-council"
+
+[[agents]]
+id = "gemini-2.5-pro@gemini"
+""".strip()
+    )
+
+    config = build_council_config_from_toml(config_path)
+
+    expected_workspace = os.path.join(str(home), "code", "repos", "valar")
+    expected_project = os.path.join(str(home), "code", "repos", "agent-council")
+    assert config["workspace"] == expected_workspace
+    assert config["projectDir"] == expected_project
+    args = config["agents"][0]["mcp"]["args"]
+    assert args[args.index("--cwd") + 1] == expected_workspace
 
 
 def test_build_council_config_from_grouped_toml_uses_alias_as_actor(tmp_path):

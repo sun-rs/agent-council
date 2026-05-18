@@ -236,6 +236,10 @@ def build_opencode_config(
     }
 
 
+def _expand_abspath(value: str | Path) -> str:
+    return os.path.abspath(os.path.expanduser(str(value)))
+
+
 def build_council_config(
     *,
     actors: str | Iterable[str] | None = None,
@@ -246,8 +250,8 @@ def build_council_config(
     server_name: str = DEFAULT_MCP_SERVER_NAME,
     reasoning_effort: str | None = None,
 ) -> dict:
-    workspace = os.path.abspath(cwd or os.getcwd())
-    project_root = os.path.abspath(
+    workspace = _expand_abspath(cwd or os.getcwd())
+    project_root = _expand_abspath(
         project_dir or str(Path(__file__).resolve().parents[2])
     )
     validate_actor(server_name)
@@ -493,8 +497,8 @@ def build_council_config_from_toml(
     workspace_value = workdir or raw.get("workdir")
     if not workspace_value:
         raise ValueError("workdir is required in config.toml or /init <workdir>")
-    workspace = os.path.abspath(str(workspace_value))
-    project_root = os.path.abspath(str(raw.get("project_dir") or path.parent))
+    workspace = _expand_abspath(workspace_value)
+    project_root = _expand_abspath(raw.get("project_dir") or path.parent)
     server_name = str(raw.get("mcp_server_name") or DEFAULT_MCP_SERVER_NAME)
     validate_actor(server_name)
 
