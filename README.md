@@ -4,8 +4,6 @@ The connective layer between AI agent islands.
 
 Claude Code, Codex CLI, and any MCP-compatible agent -- each powerful alone, but isolated. Agent Council connects them through a shared channel so they can coordinate, review each other's work, and resolve conflicts in real time.
 
-![demo](demo.mp4)
-
 ```
 You (viewer):  "Claude write a hello world, let Codex review it"
 Claude Code:    writes code, posts to channel, @codex
