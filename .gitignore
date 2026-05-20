@@ -26,3 +26,4 @@ scripts/channel_probe_tool.py
 
 # media / temp
 V/
+.DS_Store
